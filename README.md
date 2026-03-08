@@ -4,10 +4,6 @@ English | [中文](./docs/README_zh_CN.md)
 
 Light up AI routing. Hide the complexity.
 
-点亮智能路由，隐藏底层复杂。
-
----
-
 ### Introduction
 
 **LUMIN** is a lightweight, unified AI proxy SDK designed for multi-platform model calls, account pool management, and intelligent routing.
@@ -49,8 +45,6 @@ It uniformly encapsulates and completely hides the protocol differences of vario
 - Built-in retry, circuit breaking, timeout, and health check mechanisms to improve service availability
 
 - Simple configuration and concise API design, enabling developers to get started and integrate quickly
-
----
 
 ### Project Positioning
 
