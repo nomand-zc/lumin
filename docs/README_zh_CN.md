@@ -1,9 +1,5 @@
 [English](/README.md) | 中文
 
-# LUMIN GitHub首页介绍（中英双语版）
-
-# 中文版本
-
 ## LUMIN
 
 点亮智能路由，隐藏底层复杂。
