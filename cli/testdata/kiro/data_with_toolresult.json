@@ -1,0 +1,68 @@
+{
+    "model": "claude-haiku-4.5",
+    "stream": true,
+    "tools": [
+        {
+            "name": "get_weather",
+            "description": "查询指定城市的天气情况，包括温度、湿度、天气状况等信息",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "要查询天气的城市名称，例如：北京、上海、广州"
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "要查询的日期，格式为 YYYY-MM-DD，默认为今天"
+                    }
+                },
+                "required": [
+                    "city"
+                ]
+            }
+        }
+    ],
+    "messages": [
+        {
+            "role": "system",
+            "content": "你是一个有用的AI助手，请用中文回答用户的问题。"
+        },
+        {
+            "role": "user",
+            "content": "查询一下北京的明天的天气情况"
+        },
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "id": "call_get_weather_001",
+                    "index": 0,
+                    "function": {
+                        "name": "get_weather",
+                        "arguments": "{\"city\": \"北京\", \"date\": \"2026-03-08\"}"
+                    }
+                }
+            ]
+        },
+        {
+            "role": "tool",
+            "tool_id": "call_get_weather_001",
+            "tool_name": "get_weather",
+            "content": "{\"city\": \"北京\", \"date\": \"2026-03-08\", \"weather\": \"晴转多云\", \"temperature\": {\"high\": 12, \"low\": 3}, \"humidity\": \"35%\", \"wind\": \"北风3-4级\"}"
+        }
+    ],
+    "generation_config": {
+        "max_tokens": 1000,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "stream": true,
+        "stop": [
+            "\n\n",
+            "。"
+        ],
+        "presence_penalty": 0.0,
+        "frequency_penalty": 0.0
+    }
+}

@@ -1,0 +1,147 @@
+package usage
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+
+	"github.com/spf13/cobra"
+
+	"github.com/nomand-zc/lumin/cli/internal/auth"
+	"github.com/nomand-zc/lumin/cli/internal/factory"
+	"github.com/nomand-zc/lumin/log"
+	"github.com/nomand-zc/lumin/pool/taskpool"
+	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin/utils"
+)
+
+var (
+	defaultUsageViewer usageViewer
+)
+
+// usageViewer 持有 usage view 命令的参数
+type usageViewer struct {
+	credFile     string
+	outputDir    string
+	providerName string
+	provider     providers.Provider
+}
+
+func (u usageViewer) cmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "view",
+		Short: "查看凭证用量信息",
+		Long: `查看指定 provider 的凭证用量信息，包括日限额、月限额、已使用量等。
+
+支持的 provider：
+  - kiro
+
+示例：
+  provider-client usage view --file /path/to/credentials.json --provider kiro`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return u.run()
+		},
+	}
+
+	cmd.Flags().StringVarP(&u.credFile, "file", "f", "", "凭证 JSON 文件路径（必填）")
+	cmd.Flags().StringVarP(&u.outputDir, "output", "o", "", "用量信息输出目录（选填）")
+	cmd.Flags().StringVarP(&u.providerName, "provider", "p", "kiro", fmt.Sprintf("provider 名称，支持：%v（必填）", factory.SupportedProviders))
+	_ = cmd.MarkFlagRequired("file")
+
+	return cmd
+}
+
+// run 执行 usage view 逻辑
+func (u *usageViewer) run() error {
+	var err error
+	u.provider, err = factory.NewProvider(u.providerName)
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(u.credFile)
+	if err != nil {
+		return fmt.Errorf("访问路径失败: %w", err)
+	}
+
+	if info.IsDir() {
+		return u.runDir(u.credFile)
+	}
+	return u.runFile(u.credFile)
+}
+
+// runDir 递归处理目录下所有 .json 文件，使用 taskpool 并发查询
+func (u *usageViewer) runDir(dir string) error {
+	var successCount, failureCount atomic.Int64
+	var wg sync.WaitGroup
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("遍历路径 %q 失败: %w", path, err)
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(info.Name()), ".json") {
+			return nil
+		}
+
+		wg.Add(1)
+		if err := taskpool.DefaultPool().Submit(func() {
+			defer wg.Done()
+			if err := u.runFile(path); err != nil {
+				failureCount.Add(1)
+				return
+			}
+			successCount.Add(1)
+		}); err != nil {
+			wg.Done()
+			log.Errorf("提交任务失败: %v", err)
+			failureCount.Add(1)
+		}
+		return nil
+	})
+
+	// 等待所有并发任务完成
+	wg.Wait()
+
+	total := successCount.Load() + failureCount.Load()
+	log.Infof("\n查看完成！总凭证数量: %d, 成功：%d，失败：%d\n", total, successCount.Load(), failureCount.Load())
+	return err
+}
+
+// runFile 读取并显示单个凭证文件的用量信息
+func (u *usageViewer) runFile(filePath string) error {
+	// 读取凭证文件
+	creds, err := auth.LoadCredentials(u.providerName, filePath)
+	if err != nil {
+		return err
+	}
+
+	usageStats, err := u.provider.GetUsageStats(context.Background(), creds)
+	if err != nil {
+		return fmt.Errorf("获取用量信息失败: %w", err)
+	}
+
+	usageJSON, err := json.MarshalIndent(usageStats, "", "    ")
+	if err != nil {
+		return fmt.Errorf("序列化用量信息失败: %w", err)
+	}
+	if u.outputDir != "" {
+		if err := os.WriteFile(filepath.Join(u.outputDir, filepath.Base(filePath)+".usage.json"), usageJSON, 0644); err != nil {
+			return fmt.Errorf("写入用量信息文件失败: %w", err)
+		}
+
+		log.Infof("\n写入用量信息文件: %s\n", filepath.Join(u.outputDir, filepath.Base(filePath)+".usage.json"))
+		return nil
+	}
+	// 显示用量信息
+	fmt.Printf("\n=== 凭证用量信息 (%s) ===\n%s", filePath, utils.Bytes2Str(usageJSON))
+
+	return nil
+}
