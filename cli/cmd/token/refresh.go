@@ -92,8 +92,6 @@ func (r *refresher) runDir(dir string) error {
 	var successCount, failureCount atomic.Int64
 	var wg sync.WaitGroup
 
-	pool := taskpool.DefaultPool()
-
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("遍历路径 %q 失败: %w", path, err)
@@ -106,7 +104,7 @@ func (r *refresher) runDir(dir string) error {
 		}
 
 		wg.Add(1)
-		if err := pool.Submit(func() {
+		if err := taskpool.DefaultPool.Submit(func() {
 			defer wg.Done()
 			if err := r.runFile(path); err != nil {
 				failureCount.Add(1)

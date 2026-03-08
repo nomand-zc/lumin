@@ -9,20 +9,20 @@ import (
 )
 
 func TestDefaultPool_Init(t *testing.T) {
-	pool := DefaultPool()
+	pool := DefaultPool
 	assert.NotNil(t, pool)
 	assert.False(t, pool.IsClosed())
 }
 
 func TestDefaultPool_Singleton(t *testing.T) {
-	pool1 := DefaultPool()
-	pool2 := DefaultPool()
+	pool1 := DefaultPool
+	pool2 := DefaultPool
 	// 接口类型比较，底层实现相同则相等
 	assert.Equal(t, pool1, pool2)
 }
 
 func TestDefaultPool_SubmitTask(t *testing.T) {
-	pool := DefaultPool()
+	pool := DefaultPool
 
 	var counter atomic.Int64
 	var wg sync.WaitGroup
@@ -86,7 +86,7 @@ func TestPool_InterfaceMethods(t *testing.T) {
 }
 
 func BenchmarkDefaultPool_Submit(b *testing.B) {
-	pool := DefaultPool()
+	pool := DefaultPool
 	var wg sync.WaitGroup
 
 	b.ResetTimer()

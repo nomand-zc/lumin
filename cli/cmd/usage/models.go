@@ -135,7 +135,7 @@ func (m *modelsViewer) runDir(dir string) error {
 		}
 
 		wg.Add(1)
-		if err := taskpool.DefaultPool().Submit(func() {
+		if err := taskpool.DefaultPool.Submit(func() {
 			defer wg.Done()
 			if err := m.runFile(path); err != nil {
 				log.Warnf("\n处理凭证文件 %q 失败: %v", path, err)

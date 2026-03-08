@@ -92,7 +92,7 @@ func (u *usageViewer) runDir(dir string) error {
 		}
 
 		wg.Add(1)
-		if err := taskpool.DefaultPool().Submit(func() {
+		if err := taskpool.DefaultPool.Submit(func() {
 			defer wg.Done()
 			if err := u.runFile(path); err != nil {
 				failureCount.Add(1)

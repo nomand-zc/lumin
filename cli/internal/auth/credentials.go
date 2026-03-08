@@ -105,7 +105,7 @@ func GetValidCredentials(provider providers.Provider, dirPath string) (credentia
 		}
 
 		wg.Add(1)
-		if err := taskpool.DefaultPool().Submit(func() {
+		if err := taskpool.DefaultPool.Submit(func() {
 			defer wg.Done()
 			// 检查是否已找到有效凭证，避免无效网络请求
 			select {

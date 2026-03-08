@@ -115,7 +115,7 @@ func (s *credScanner) run() error {
 
 		fileName := info.Name()
 		wg.Add(1)
-		if err := taskpool.DefaultPool().Submit(func() {
+		if err := taskpool.DefaultPool.Submit(func() {
 			defer wg.Done()
 
 			status, err := s.checkCredential(path)

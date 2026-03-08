@@ -1,9 +1,6 @@
 package taskpool
 
 import (
-	"fmt"
-	"sync"
-
 	"github.com/nomand-zc/lumin/log"
 	ants "github.com/panjf2000/ants/v2"
 )
@@ -50,27 +47,14 @@ func (p *antsPool) Release() {
 	p.pool.Release()
 }
 
-var (
-	defaultPool Pool
-	once        sync.Once
-)
+var DefaultPool Pool
 
-// DefaultPool 返回全局默认任务池（懒初始化，线程安全）。
-// 适用于 CLI 批量任务等场景，如凭证扫描校验。
-func DefaultPool() Pool {
-	once.Do(func() {
-		pool, err := ants.NewPool(DefaultPoolSize,
-			ants.WithPreAlloc(true),
-			ants.WithPanicHandler(func(i any) {
-				log.Errorf("[TaskPool] panic recovered: %v", i)
-			}),
-		)
-		if err != nil {
-			panic(fmt.Sprintf("初始化默认任务池失败: %v", err))
-		}
-		defaultPool = &antsPool{pool: pool}
-	})
-	return defaultPool
+func init() {
+	pool, err := NewPool(DefaultPoolSize)
+	if err != nil {
+		panic(err)
+	}
+	DefaultPool = pool
 }
 
 // NewAntsPool 创建自定义配置的任务池。
@@ -88,12 +72,4 @@ func NewPool(size int, opts ...ants.Option) (Pool, error) {
 		return nil, err
 	}
 	return &antsPool{pool: pool}, nil
-}
-
-// Release 释放全局默认任务池资源。
-// 应在程序退出前调用。
-func Release() {
-	if defaultPool != nil {
-		defaultPool.Release()
-	}
 }
