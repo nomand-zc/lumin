@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // completionChunkParser 处理 completion_chunk 事件（流式增量）

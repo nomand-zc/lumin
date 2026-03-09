@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder/types"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder/types"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // GetMessageText 获取消息的纯文本内容

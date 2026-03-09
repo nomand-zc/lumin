@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // PayloadParser 定义事件流消息解析器接口

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder"
 )
 
 // ConvertRequest 将通用请求转换为 Kiro CodeWhisperer 请求格式

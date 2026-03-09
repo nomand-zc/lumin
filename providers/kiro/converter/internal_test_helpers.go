@@ -4,8 +4,8 @@ package converter
 // 将 builder 包中的内部函数桥接到 converter 包，供白盒测试（package converter）直接调用
 
 import (
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder"
 )
 
 const (

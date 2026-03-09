@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // contextUsageParser 处理上下文使用量事件

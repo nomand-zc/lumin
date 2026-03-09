@@ -3,7 +3,7 @@ package builder
 import (
 	"strings"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // SystemPromptBuilder 负责从消息列表中提取 system prompt：

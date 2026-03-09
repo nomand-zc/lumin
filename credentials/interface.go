@@ -3,7 +3,7 @@ package credentials
 import (
 	"time"
 
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // Credential 凭证接口，用于向 Provider 进行身份认证。包含刷新凭证、获取 access/refresh token、检查过期、转换为 map 格式等方法。

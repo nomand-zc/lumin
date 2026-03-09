@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // isToolCallPayload 检查载荷是否包含工具调用信息

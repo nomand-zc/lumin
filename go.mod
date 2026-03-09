@@ -1,4 +1,4 @@
-module github.com/nomand-zc/lumin
+module github.com/nomand-zc/lumin-client
 
 go 1.24.11
 

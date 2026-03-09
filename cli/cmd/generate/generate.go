@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/nomand-zc/lumin/cli/internal/auth"
-	"github.com/nomand-zc/lumin/cli/internal/factory"
-	"github.com/nomand-zc/lumin/credentials"
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/cli/internal/auth"
+	"github.com/nomand-zc/lumin-client/cli/internal/factory"
+	"github.com/nomand-zc/lumin-client/credentials"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // generator 持有 generate 命令的参数

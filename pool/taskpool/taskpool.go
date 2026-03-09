@@ -1,7 +1,7 @@
 package taskpool
 
 import (
-	"github.com/nomand-zc/lumin/log"
+	"github.com/nomand-zc/lumin-client/log"
 	ants "github.com/panjf2000/ants/v2"
 )
 

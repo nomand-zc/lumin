@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 	"github.com/stretchr/testify/require"
 	"github.com/tiktoken-go/tokenizer"
 )

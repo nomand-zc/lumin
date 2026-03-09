@@ -3,8 +3,8 @@ package factory
 import (
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
-	kiroprovider "github.com/nomand-zc/lumin/providers/kiro"
+	"github.com/nomand-zc/lumin-client/providers"
+	kiroprovider "github.com/nomand-zc/lumin-client/providers/kiro"
 )
 
 // SupportedProviders 支持的 provider 列表

@@ -3,8 +3,8 @@ package builder
 import (
 	"strings"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder/types"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder/types"
 )
 
 // CurrentMessageBuilder 负责解析最后一条消息（currentMessage）：

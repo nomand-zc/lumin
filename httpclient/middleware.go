@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 type requestLog struct {

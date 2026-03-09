@@ -3,9 +3,9 @@ package providers
 import (
 	"context"
 
-	"github.com/nomand-zc/lumin/credentials"
-	"github.com/nomand-zc/lumin/queue"
-	"github.com/nomand-zc/lumin/usagerule"
+	"github.com/nomand-zc/lumin-client/credentials"
+	"github.com/nomand-zc/lumin-client/queue"
+	"github.com/nomand-zc/lumin-client/usagerule"
 )
 
 // Provider is an interface for a provider. It includes methods for generating content and generating content in a stream. The GenerateContent method takes a context, credentials, and a request, and returns a response or an error. The GenerateContentStream method takes the same parameters but returns a ResponseChain for streaming responses.

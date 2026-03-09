@@ -2,7 +2,7 @@ package builder
 
 import (
 	"github.com/google/uuid"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder/types"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder/types"
 )
 
 const (

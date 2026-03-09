@@ -10,14 +10,14 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream"
 	"github.com/google/uuid"
-	"github.com/nomand-zc/lumin/credentials"
-	kirocreds "github.com/nomand-zc/lumin/credentials/kiro"
-	"github.com/nomand-zc/lumin/httpclient"
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/parser"
-	"github.com/nomand-zc/lumin/queue"
+	"github.com/nomand-zc/lumin-client/credentials"
+	kirocreds "github.com/nomand-zc/lumin-client/credentials/kiro"
+	"github.com/nomand-zc/lumin-client/httpclient"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/parser"
+	"github.com/nomand-zc/lumin-client/queue"
 )
 
 const (

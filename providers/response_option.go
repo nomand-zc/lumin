@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // Options is a function that sets options on a response.

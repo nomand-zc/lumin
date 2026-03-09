@@ -9,12 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nomand-zc/lumin/cli/internal/factory"
-	"github.com/nomand-zc/lumin/credentials"
-	kirocreds "github.com/nomand-zc/lumin/credentials/kiro"
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/pool/taskpool"
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/cli/internal/factory"
+	"github.com/nomand-zc/lumin-client/credentials"
+	kirocreds "github.com/nomand-zc/lumin-client/credentials/kiro"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/pool/taskpool"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // LoadCredentials 从文件中加载凭证

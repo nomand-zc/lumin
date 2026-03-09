@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // completionParser 处理 completion 事件（完整响应）

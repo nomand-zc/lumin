@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/nomand-zc/lumin/cli/cmd"
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/cli/cmd"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

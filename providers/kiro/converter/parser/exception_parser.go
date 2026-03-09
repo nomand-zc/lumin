@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // exceptionParser 处理 exception 类型消息

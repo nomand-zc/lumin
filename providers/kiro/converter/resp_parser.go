@@ -3,10 +3,10 @@ package converter
 import (
 	"context"
 
-	"github.com/nomand-zc/lumin/log"
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/parser"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/log"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/parser"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // ConvertResponse 将 Kiro CodeWhisperer 响应转换为通用响应格式

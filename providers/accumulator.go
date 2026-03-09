@@ -3,7 +3,7 @@ package providers
 import (
 	"time"
 
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // responseStateEnum 表示响应累积过程中的状态枚举

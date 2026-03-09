@@ -11,11 +11,11 @@ import (
 	"time"
 
 	jujuerrors "github.com/juju/errors"
-	"github.com/nomand-zc/lumin/credentials"
-	kirocreds "github.com/nomand-zc/lumin/credentials/kiro"
-	"github.com/nomand-zc/lumin/httpclient"
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/credentials"
+	kirocreds "github.com/nomand-zc/lumin-client/credentials/kiro"
+	"github.com/nomand-zc/lumin-client/httpclient"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 const (

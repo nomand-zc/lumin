@@ -3,8 +3,8 @@ package builder
 import (
 	"context"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/kiro/converter/builder/types"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder/types"
 )
 
 // BuildContext 是各构建阶段共享的中间状态容器

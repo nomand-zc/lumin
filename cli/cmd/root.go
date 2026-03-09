@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/nomand-zc/lumin/cli/cmd/generate"
-	"github.com/nomand-zc/lumin/cli/cmd/scan"
-	"github.com/nomand-zc/lumin/cli/cmd/token"
-	"github.com/nomand-zc/lumin/cli/cmd/usage"
+	"github.com/nomand-zc/lumin-client/cli/cmd/generate"
+	"github.com/nomand-zc/lumin-client/cli/cmd/scan"
+	"github.com/nomand-zc/lumin-client/cli/cmd/token"
+	"github.com/nomand-zc/lumin-client/cli/cmd/usage"
 	"github.com/spf13/cobra"
 )
 

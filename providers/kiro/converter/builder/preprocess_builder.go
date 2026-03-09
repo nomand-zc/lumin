@@ -1,6 +1,6 @@
 package builder
 
-import "github.com/nomand-zc/lumin/providers"
+import "github.com/nomand-zc/lumin-client/providers"
 
 // PreprocessBuilder 负责消息预处理阶段：
 //  1. 移除末尾内容为 "{" 的 assistant 消息

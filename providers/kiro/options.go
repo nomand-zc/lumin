@@ -1,8 +1,8 @@
 package kiro
 
 import (
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/providers/tiktoken"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/tiktoken"
 )
 
 const (

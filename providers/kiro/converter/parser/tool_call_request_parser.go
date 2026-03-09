@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // toolCallRequestParser 处理标准 tool_call_request 事件

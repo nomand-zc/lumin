@@ -3,7 +3,7 @@ package providers
 import (
 	"encoding/json"
 
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // ToolCall represents a call to a tool (function) in the model response.

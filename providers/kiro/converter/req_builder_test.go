@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nomand-zc/lumin/providers"
+	"github.com/nomand-zc/lumin-client/providers"
 )
 
 // ============================================================

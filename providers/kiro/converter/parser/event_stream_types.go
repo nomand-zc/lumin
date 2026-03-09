@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/utils"
 )
 
 // 消息类型常量

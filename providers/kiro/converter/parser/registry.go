@@ -3,7 +3,7 @@ package parser
 import (
 	"errors"
 
-	"github.com/nomand-zc/lumin/log"
+	"github.com/nomand-zc/lumin-client/log"
 )
 
 // registry 全局解析器注册表

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nomand-zc/lumin/providers"
-	"github.com/nomand-zc/lumin/utils"
+	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/utils"
 	"github.com/tiktoken-go/tokenizer"
 )
 

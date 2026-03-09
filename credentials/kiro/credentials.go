@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/nomand-zc/lumin/credentials"
+	"github.com/nomand-zc/lumin-client/credentials"
 )
 
 const (
