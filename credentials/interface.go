@@ -8,6 +8,7 @@ import (
 
 // Credential 凭证接口，用于向 Provider 进行身份认证。包含刷新凭证、获取 access/refresh token、检查过期、转换为 map 格式等方法。
 type Credential interface {
+	Clone() Credential
 	// Validate validates the credentials.
 	Validate() error
 	// GetAccessToken returns the access token.

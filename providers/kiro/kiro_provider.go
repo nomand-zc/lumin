@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	defaultProviderName = "default"
+	DefaultProviderName = "default"
 )
 
 func init() {
-	providers.Register(NewProvider(defaultProviderName))
+	providers.Register(NewProvider(DefaultProviderName))
 }
 
 const (

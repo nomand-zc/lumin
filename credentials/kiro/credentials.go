@@ -11,6 +11,10 @@ const (
 	AuthMethodSocial = "social"
 )
 
+func init() {
+	credentials.Register("kiro", NewCredential[[]byte])
+}
+
 type Credential struct {
 	AccessToken  string     `json:"accessToken"`
 	RefreshToken string     `json:"refreshToken,omitempty"`
@@ -33,7 +37,7 @@ type Credential struct {
 
 // NewCredential 创建一个新的凭据实例
 // 支持传入 JSON 字符串或 []byte，解析失败时返回 nil
-func NewCredential[T string | []byte](raw T) *Credential {
+func NewCredential[T string | []byte](raw T) credentials.Credential {
 	var creds Credential
 	if err := json.Unmarshal([]byte(raw), &creds); err != nil {
 		return nil
@@ -42,7 +46,7 @@ func NewCredential[T string | []byte](raw T) *Credential {
 }
 
 // Clone 克隆凭据实例
-func (c *Credential) Clone() *Credential {
+func (c *Credential) Clone() credentials.Credential {
 	clone := *c
 	if c.ExpiresAt != nil {
 		t := *c.ExpiresAt
@@ -126,20 +130,23 @@ func (c *Credential) IsExpired() bool {
 
 // ToMap 将凭据转换为map格式
 func (c *Credential) ToMap() map[string]any {
-	if c.raw != nil {
-		return c.raw
+	if c == nil {
+		return nil
 	}
-	c.raw = map[string]any{
-		"accessToken":  c.AccessToken,
-		"refreshToken": c.RefreshToken,
-		"profileArn":   c.ProfileArn,
-		"authMethod":   c.AuthMethod,
-		"provider":     c.Provider,
-		"region":       c.Region,
-		"expiresAt":    c.ExpiresAt,
-		"clientId":     c.ClientID,
-		"clientSecret": c.ClientSecret,
-		"idcRegion":    c.IDCRegion,
+	if c.raw == nil {
+		c.raw = map[string]any{
+			"accessToken":  c.AccessToken,
+			"refreshToken": c.RefreshToken,
+			"profileArn":   c.ProfileArn,
+			"authMethod":   c.AuthMethod,
+			"provider":     c.Provider,
+			"region":       c.Region,
+			"expiresAt":    c.ExpiresAt,
+			"clientId":     c.ClientID,
+			"clientSecret": c.ClientSecret,
+			"idcRegion":    c.IDCRegion,
+		}
 	}
+	
 	return c.raw
 }
