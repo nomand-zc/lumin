@@ -21,6 +21,14 @@ import (
 )
 
 const (
+	defaultProviderName = "default"
+)
+
+func init() {
+	providers.Register(NewProvider(defaultProviderName))
+}
+
+const (
 	providerName     = "kiro"
 	defaultQueueSize = 100
 	// 事件流解码 payload 缓冲区大小
