@@ -139,7 +139,7 @@ func GetValidCredentials(provider providers.Provider, dirPath string) (credentia
 	return finalCreds, nil
 }
 
-// GetCredentialsFromFile 从文件加载凭证并通过 CheckAvailability 校验可用性。
+// GetCredentialsFromFile 从文件加载凭证并校验可用性。
 // 如果凭证过期会自动刷新并写回文件。
 func GetCredentialsFromFile(provider providers.Provider, file string) (credentials.Credential, credentials.CredentialStatus, error) {
 	// 构建凭证
@@ -151,13 +151,13 @@ func GetCredentialsFromFile(provider providers.Provider, file string) (credentia
 	// 记录刷新前的过期状态，用于判断是否需要写回文件
 	wasExpired := creds.IsExpired()
 
-	// 使用 CheckAvailability 统一进行过期刷新 + 用量校验
-	status, err := provider.CheckAvailability(context.Background(), creds)
+	// 统一进行过期刷新 + 用量校验
+	status, err := CheckAvailability(context.Background(), provider, creds)
 	if err != nil {
 		return creds, status, err
 	}
 
-	// 如果之前过期且现在已恢复可用，说明 CheckAvailability 内部做了刷新，写回文件
+	// 如果之前过期且现在已恢复可用，说明内部做了刷新，写回文件
 	if wasExpired && status == credentials.StatusAvailable {
 		if err := SaveCredentials(creds, file); err != nil {
 			return creds, status, fmt.Errorf("保存刷新后的凭证失败: %w", err)

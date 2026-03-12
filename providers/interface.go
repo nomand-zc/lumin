@@ -16,12 +16,10 @@ type Model interface {
 	GenerateContentStream(ctx context.Context, creds credentials.Credential, req Request) (queue.Consumer[*Response], error)
 }
 
-// CredentialManager 凭证管理器接口，负责凭证的刷新和可用性校验。
+// CredentialManager 凭证管理器接口，负责凭证的刷新。
 type CredentialManager interface {
 	// Refresh 刷新凭证（如刷新过期的 Token），直接修改入参 creds 中的字段。
 	Refresh(ctx context.Context, creds credentials.Credential) error
-	// CheckAvailability 校验凭证的可用性，返回凭证当前的状态。
-	CheckAvailability(ctx context.Context, creds credentials.Credential) (credentials.CredentialStatus, error)
 }
 
 // UsageLimiter is an interface for limiting usage. It includes methods for listing models and getting usage rules and stats.

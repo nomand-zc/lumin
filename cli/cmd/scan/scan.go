@@ -177,8 +177,8 @@ func (s *credScanner) checkCredential(filePath string) (credStatus, error) {
 		return "", fmt.Errorf("加载凭证失败: %w", err)
 	}
 
-	// 使用 CheckAvailability 统一校验凭证可用性
-	status, err := s.provider.CheckAvailability(context.Background(), creds)
+	// 统一校验凭证可用性
+	status, err := auth.CheckAvailability(context.Background(), s.provider, creds)
 	if err != nil {
 		return statusDisable, nil
 	}
