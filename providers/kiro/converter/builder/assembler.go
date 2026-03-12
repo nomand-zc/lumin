@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/nomand-zc/lumin-client/providers/kiro/converter/builder/types"
 )
@@ -42,9 +44,14 @@ func Assemble(ctx *BuildContext) *types.Request {
 		req.InferenceConfig = infCfg
 	}
 
+	// 将 systemPrompt 拼接到 currentMessage.content 前面
+	// 与 CLIProxyAPIPlus 的 buildFinalContent 行为对齐：
+	// "--- SYSTEM PROMPT ---\n" + systemPrompt + "\n--- END SYSTEM PROMPT ---\n\n" + userContent
+	finalContent := buildFinalContent(ctx.CurrentContent, ctx.SystemPrompt, ctx.CurrentToolResults)
+
 	// 构建 userInputMessage
 	userInputMsg := types.UserInputMessage{
-		Content: ctx.CurrentContent,
+		Content: finalContent,
 		ModelId: ctx.ModelId,
 		Origin:  originAIEditor,
 	}
@@ -114,4 +121,32 @@ func filterOrphanedCurrentToolResults(toolResults []types.ToolResult, history []
 		}
 	}
 	return filtered
+}
+
+// buildFinalContent 将 systemPrompt 拼接到 currentMessage.content 前面
+// 与 CLIProxyAPIPlus 的 buildFinalContent 行为对齐：
+//   - systemPrompt 用 "--- SYSTEM PROMPT ---" 格式包装
+//   - 拼接后内容为空时，根据是否有 toolResults 设置兜底值
+func buildFinalContent(content, systemPrompt string, toolResults []types.ToolResult) string {
+	var contentBuilder strings.Builder
+
+	if systemPrompt != "" {
+		contentBuilder.WriteString("--- SYSTEM PROMPT ---\n")
+		contentBuilder.WriteString(systemPrompt)
+		contentBuilder.WriteString("\n--- END SYSTEM PROMPT ---\n\n")
+	}
+
+	contentBuilder.WriteString(content)
+	finalContent := contentBuilder.String()
+
+	// Kiro API 要求 content 非空
+	if strings.TrimSpace(finalContent) == "" {
+		if len(toolResults) > 0 {
+			finalContent = "Tool results provided."
+		} else {
+			finalContent = "Continue"
+		}
+	}
+
+	return finalContent
 }

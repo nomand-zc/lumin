@@ -276,8 +276,8 @@ func TestPreprocessMessages_MergeAdjacentUser_PrevContentNextParts(t *testing.T)
 // 任务 5：System Prompt 处理测试
 // ============================================================
 
-// TestConvertRequest_SystemPrompt_MergedWithFirstUser system + user + assistant + user，system 应与第一条 user 合并
-// 注意：相邻两条 user 消息会被 preprocessMessages 合并，所以需要用 user+assistant+user 来测试 system 与第一条 user 合并的场景
+// TestConvertRequest_SystemPrompt_MergedWithFirstUser system + user + assistant + user
+// systemPrompt 不再合并到 history，而是拼接到 currentMessage.content 中
 func TestConvertRequest_SystemPrompt_MergedWithFirstUser(t *testing.T) {
 	req := newReq("claude-sonnet-4.5",
 		makeSystemMsg("系统提示"),
@@ -296,18 +296,25 @@ func TestConvertRequest_SystemPrompt_MergedWithFirstUser(t *testing.T) {
 	if len(history) == 0 {
 		t.Fatal("期望 history 非空")
 	}
+	// history[0] 应为纯 user 消息（不含 systemPrompt）
 	firstHistoryItem := history[0]
 	if firstHistoryItem.UserInputMessage == nil {
 		t.Fatal("期望 history[0] 为 UserInputMessage")
 	}
-	// system 与第一条 user 消息合并
-	expected := "系统提示\n\n用户消息1"
-	if firstHistoryItem.UserInputMessage.Content != expected {
-		t.Errorf("期望 history[0] 内容为 %q，实际 %q", expected, firstHistoryItem.UserInputMessage.Content)
+	if firstHistoryItem.UserInputMessage.Content != "用户消息1" {
+		t.Errorf("期望 history[0] 内容为 %q，实际 %q", "用户消息1", firstHistoryItem.UserInputMessage.Content)
+	}
+	// systemPrompt 应拼接到 currentMessage.content 中
+	currentContent := result.ConversationState.CurrentMessage.UserInputMessage.Content
+	expectedContent := "--- SYSTEM PROMPT ---\n系统提示\n--- END SYSTEM PROMPT ---\n\n用户消息2"
+	if currentContent != expectedContent {
+		t.Errorf("期望 currentContent=%q，实际=%q", expectedContent, currentContent)
 	}
 }
 
-// TestConvertRequest_SystemPrompt_StandaloneBeforeAssistant system + assistant + user，system 应单独作为 history[0]
+// TestConvertRequest_SystemPrompt_StandaloneBeforeAssistant system + assistant + user
+// systemPrompt 不再放入 history，而是拼接到 currentMessage.content 中
+// history 以 assistant 开头时，会自动插入占位 user 消息 "."
 func TestConvertRequest_SystemPrompt_StandaloneBeforeAssistant(t *testing.T) {
 	req := newReq("claude-sonnet-4.5",
 		makeSystemMsg("系统提示"),
@@ -325,17 +332,24 @@ func TestConvertRequest_SystemPrompt_StandaloneBeforeAssistant(t *testing.T) {
 	if len(history) == 0 {
 		t.Fatal("期望 history 非空")
 	}
+	// history 以 assistant 开头，应自动插入占位 user 消息
 	firstHistoryItem := history[0]
 	if firstHistoryItem.UserInputMessage == nil {
-		t.Fatal("期望 history[0] 为 UserInputMessage")
+		t.Fatal("期望 history[0] 为占位 UserInputMessage")
 	}
-	if firstHistoryItem.UserInputMessage.Content != "系统提示" {
-		t.Errorf("期望 history[0] 内容为 %q，实际 %q", "系统提示", firstHistoryItem.UserInputMessage.Content)
+	if firstHistoryItem.UserInputMessage.Content != "." {
+		t.Errorf("期望 history[0] 占位内容为 %q，实际 %q", ".", firstHistoryItem.UserInputMessage.Content)
+	}
+	// systemPrompt 应拼接到 currentMessage.content 中
+	currentContent := result.ConversationState.CurrentMessage.UserInputMessage.Content
+	expectedContent := "--- SYSTEM PROMPT ---\n系统提示\n--- END SYSTEM PROMPT ---\n\n用户消息"
+	if currentContent != expectedContent {
+		t.Errorf("期望 currentContent=%q，实际=%q", expectedContent, currentContent)
 	}
 }
 
-// TestConvertRequest_MultipleSystemPrompts 两条 system 消息，应合并后再与第一条 user 消息合并
-// 注意：preprocessMessages 会将相邻 system 消息用 "\n" 合并，然后 ConvertRequest 再将 system prompt 与 user 消息用 "\n\n" 合并
+// TestConvertRequest_MultipleSystemPrompts 两条 system 消息，应合并后拼接到 currentMessage.content 中
+// preprocessMessages 会将相邻 system 消息用 "\n" 合并
 func TestConvertRequest_MultipleSystemPrompts(t *testing.T) {
 	req := newReq("claude-sonnet-4.5",
 		makeSystemMsg("系统提示1"),
@@ -349,19 +363,17 @@ func TestConvertRequest_MultipleSystemPrompts(t *testing.T) {
 	if result == nil {
 		t.Fatal("期望返回非 nil 结果")
 	}
+	// system 消息被提取后，只剩一条 user 消息，history 应为空
 	history := result.ConversationState.History
-	if len(history) == 0 {
-		t.Fatal("期望 history 非空")
+	if len(history) != 0 {
+		t.Errorf("期望 history 为空，实际 %d 条", len(history))
 	}
-	firstHistoryItem := history[0]
-	if firstHistoryItem.UserInputMessage == nil {
-		t.Fatal("期望 history[0] 为 UserInputMessage")
-	}
-	// preprocessMessages 将两条 system 消息用 "\n" 合并为一条，
-	// ConvertRequest 提取 system prompt 后再与 user 消息用 "\n\n" 合并
-	expected := "系统提示1\n系统提示2\n\n用户消息"
-	if firstHistoryItem.UserInputMessage.Content != expected {
-		t.Errorf("期望 history[0] 内容为 %q，实际 %q", expected, firstHistoryItem.UserInputMessage.Content)
+	// systemPrompt 应拼接到 currentMessage.content 中
+	currentContent := result.ConversationState.CurrentMessage.UserInputMessage.Content
+	// preprocessMessages 将两条 system 消息用 "\n" 合并为 "系统提示1\n系统提示2"
+	expectedContent := "--- SYSTEM PROMPT ---\n系统提示1\n系统提示2\n--- END SYSTEM PROMPT ---\n\n用户消息"
+	if currentContent != expectedContent {
+		t.Errorf("期望 currentContent=%q，实际=%q", expectedContent, currentContent)
 	}
 }
 
@@ -1043,10 +1055,11 @@ func TestConvertRequest_FullConversation(t *testing.T) {
 		t.Error("期望 history 中存在包含 ToolUses 的 assistant 消息")
 	}
 
-	// 验证 currentMessage 内容为 "谢谢"
+	// 验证 currentMessage 内容包含 systemPrompt + 用户文本
 	currentContent := result.ConversationState.CurrentMessage.UserInputMessage.Content
-	if currentContent != "谢谢" {
-		t.Errorf("期望 currentContent=%q，实际=%q", "谢谢", currentContent)
+	expectedContent := "--- SYSTEM PROMPT ---\n你是一个助手\n--- END SYSTEM PROMPT ---\n\n谢谢"
+	if currentContent != expectedContent {
+		t.Errorf("期望 currentContent=%q，实际=%q", expectedContent, currentContent)
 	}
 }
 

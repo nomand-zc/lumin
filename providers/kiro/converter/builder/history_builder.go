@@ -19,9 +19,10 @@ const (
 )
 
 // HistoryBuilder 负责构建历史消息列表：
-//   - 将 system prompt 合并到首条 user 消息（或单独作为一条 user 消息插入）
 //   - 将除最后一条之外的所有消息转换为 types.HistoryItem
 //   - 按 keepImageThreshold 策略决定是否保留历史消息中的图片
+//   - 确保 history 以 user 消息开头（如有必要插入占位消息）
+//   - 注意：systemPrompt 不在此处处理，统一由 Assembler 拼接到 currentMessage.content 中
 //
 // 结果写入 BuildContext.History
 type HistoryBuilder struct{}
@@ -30,33 +31,13 @@ type HistoryBuilder struct{}
 func (b *HistoryBuilder) Build(ctx *BuildContext) error {
 	messages := ctx.Messages
 	modelId := ctx.ModelId
-	systemPrompt := ctx.SystemPrompt
+
+	// 注意：systemPrompt 不再合并到 history 中。
+	// 与 CLIProxyAPIPlus 对齐，systemPrompt（含 thinking 标签）统一在 Assembler 阶段
+	// 拼接到 currentMessage.content 前面，使用 "--- SYSTEM PROMPT ---" 格式包装。
 
 	history := []types.HistoryItem{}
 	startIndex := 0
-
-	// 将 system prompt 合并到第一条 user 消息，或单独作为一条 user 消息
-	if systemPrompt != "" {
-		if messages[0].Role == providers.RoleUser {
-			firstUserContent := GetMessageText(messages[0])
-			history = append(history, types.HistoryItem{
-				UserInputMessage: &types.UserInputMessage{
-					Content: systemPrompt + "\n\n" + firstUserContent,
-					ModelId: modelId,
-					Origin:  originAIEditor,
-				},
-			})
-			startIndex = 1
-		} else {
-			history = append(history, types.HistoryItem{
-				UserInputMessage: &types.UserInputMessage{
-					Content: systemPrompt,
-					ModelId: modelId,
-					Origin:  originAIEditor,
-				},
-			})
-		}
-	}
 
 	// 构建历史消息（除最后一条之外的所有消息）
 	// 使用 pendingToolResults 机制聚合连续的 tool 消息
@@ -115,6 +96,19 @@ func (b *HistoryBuilder) Build(ctx *BuildContext) error {
 	// 传递给 CurrentMessageBuilder 阶段处理
 	if len(pendingToolResults) > 0 {
 		ctx.PendingToolResults = pendingToolResults
+	}
+
+	// Kiro API 要求 history 以 user 消息开头。
+	// 某些客户端可能发送以 assistant 消息开头的对话，需要前置一条占位 user 消息。
+	if len(history) > 0 && history[0].UserInputMessage == nil {
+		placeholder := types.HistoryItem{
+			UserInputMessage: &types.UserInputMessage{
+				Content: ".",
+				ModelId: modelId,
+				Origin:  originAIEditor,
+			},
+		}
+		history = append([]types.HistoryItem{placeholder}, history...)
 	}
 
 	// 截断超长历史消息

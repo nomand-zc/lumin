@@ -214,7 +214,9 @@ func (p *kiroProvider) handleStreamEvent(ctx context.Context, inv *providers.Inv
 			// err == nil {
 			// 	collectedUsage.PromptTokens += completionTokens
 			// }
-			collectedUsage.CompletionTokens += result.Usage.CompletionTokens
+			if result.Usage != nil {
+				collectedUsage.CompletionTokens += result.Usage.CompletionTokens
+			}
 			// 检测到内联错误时，发送错误响应并终止流
 			if result.Error != nil && result.Error.Message != "" {
 				chainQueue.Push(ctx, result)
