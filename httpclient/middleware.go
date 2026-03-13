@@ -99,7 +99,7 @@ var LoggingMiddleware RoundTripperMiddleware = func(next http.RoundTripper) http
 		if resp != nil {
 			reqLog.RespCode = &resp.StatusCode
 			reqLog.RespHeader = resp.Header
-			if EnabledPrintRespBody(ctx) {
+			if resp.StatusCode != http.StatusOK || EnabledPrintRespBody(ctx) {
 				respBody, readBodyErr := readAndRestoreBody(resp.Body)
 				reqLog.RespBody = respBody
 				reqLog.Err = utils.If(reqLog.Err != nil, reqLog.Err, readBodyErr)
@@ -115,7 +115,7 @@ var LoggingMiddleware RoundTripperMiddleware = func(next http.RoundTripper) http
 			return nil, err
 		}
 
-		// ---- 记录响应信息（不读取 Body，避免影响流式响应）----
+		// ---- 记录响应信息 ----
 		log.Infof("[HTTPClient-LoggingMiddleware]: %s", reqLog.String())
 
 		return resp, nil

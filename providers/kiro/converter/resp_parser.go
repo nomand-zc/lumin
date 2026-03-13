@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/nomand-zc/lumin-client/log"
 	"github.com/nomand-zc/lumin-client/providers"
@@ -71,7 +72,7 @@ func detectInlineError(ctx context.Context, payload []byte, messageType, eventTy
 
 	// 检查 AWS 格式：{"_type": "com.amazon.aws.codewhisperer#ValidationException", "message": "..."}
 	if errType, ok := event["_type"].(string); ok && errType != "" {
-		errMsg := getStringField(event, "message")
+		errMsg, _ := utils.GetMapValue[string, string](event, "message")
 		log.Errorf("检测到 AWS 内联错误: _type=%s, message=%s", errType, errMsg)
 		return providers.NewResponse(ctx,
 			providers.WithResponseError(&providers.ResponseError{
@@ -84,11 +85,11 @@ func detectInlineError(ctx context.Context, payload []byte, messageType, eventTy
 
 	// 检查通用格式：{"type": "error", "message": "..."} 或 {"type": "exception", ...}
 	if typeVal, ok := event["type"].(string); ok && (typeVal == "error" || typeVal == "exception") {
-		errMsg := getStringField(event, "message")
+		errMsg, _ := utils.GetMapValue[string, string](event, "message")
 		// 尝试从嵌套 error 对象中获取 message
 		if errMsg == "" {
 			if errObj, ok := event["error"].(map[string]any); ok {
-				errMsg = getStringField(errObj, "message")
+				errMsg, _ = utils.GetMapValue[string, string](errObj, "message")
 			}
 		}
 		log.Errorf("检测到通用内联错误: type=%s, message=%s", typeVal, errMsg)
@@ -102,11 +103,11 @@ func detectInlineError(ctx context.Context, payload []byte, messageType, eventTy
 
 	// 处理 error/exception/internalServerException 事件类型
 	if isErrorEventType {
-		errMsg := getStringField(event, "message")
+		errMsg, _ := utils.GetMapValue[string, string](event, "message")
 		// 尝试从嵌套的事件对象中获取
 		if errMsg == "" {
 			if nested, ok := event[eventType].(map[string]any); ok {
-				errMsg = getStringField(nested, "message")
+				errMsg, _ = utils.GetMapValue[string, string](nested, "message")
 			}
 		}
 		if errMsg == "" {
@@ -125,38 +126,16 @@ func detectInlineError(ctx context.Context, payload []byte, messageType, eventTy
 }
 
 // containsErrorMarker 快速字节检测 payload 是否可能包含错误标记
-// 避免对每条正常消息都做完整的 JSON unmarshal
+// 避免对每条正常消息都做完整的 JSON unmarshal·
 func containsErrorMarker(payload []byte) bool {
 	s := utils.Bytes2Str(payload)
 	return len(s) > 0 && (
 	// AWS 格式
-	contains(s, `"_type"`) ||
+	strings.Contains(s, `"_type"`) ||
 		// 通用格式
-		contains(s, `"type":"error"`) ||
-		contains(s, `"type":"exception"`) ||
-		contains(s, `"type": "error"`) ||
-		contains(s, `"type": "exception"`))
+		strings.Contains(s, `"type":"error"`) ||
+		strings.Contains(s, `"type":"exception"`) ||
+		strings.Contains(s, `"type": "error"`) ||
+		strings.Contains(s, `"type": "exception"`))
 }
 
-// contains 简单的字节包含检测
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchSubstring(s, substr)
-}
-
-// searchSubstring 搜索子串
-func searchSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-// getStringField 从 map 中安全获取 string 字段
-func getStringField(m map[string]any, key string) string {
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
-}
