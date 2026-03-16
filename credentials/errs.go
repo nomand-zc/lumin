@@ -24,4 +24,6 @@ var (
 	ErrClientSecretEmpty = errors.New("client secret is empty")
 	// ErrExpiresAtExpired 表示过期时间已过期的错误
 	ErrExpiresAtExpired = errors.New("expires at is expired")
+	// ErrProjectIDEmpty 表示项目 ID 为空的错误
+	ErrProjectIDEmpty = errors.New("project id is empty")
 )
