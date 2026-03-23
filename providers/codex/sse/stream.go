@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/nomand-zc/lumin-client/providers"
 	"github.com/nomand-zc/lumin-client/providers/codex/types"
@@ -36,6 +40,7 @@ func (sp *StreamProcessor) Process(ctx context.Context, body io.ReadCloser) {
 	var hasToolCalls bool
 	var serverModel string
 	var responseID string
+	var reasoningOutputTokens int
 	toolCallIndex := 0
 
 	err := Parse(ctx, body, func(event Event) error {
@@ -127,7 +132,7 @@ func (sp *StreamProcessor) Process(ctx context.Context, body io.ReadCloser) {
 
 		case "response.completed":
 			// response.completed 事件：响应完成，提取用量信息
-			// 对齐 codex 中返回 ResponseEvent::Completed
+			// 对齐 codex-rs/codex-api/src/sse/responses.rs 中 ResponseCompletedUsage -> TokenUsage 转换
 			if sseEvent.Response != nil {
 				var completed types.ResponseCompleted
 				if err := json.Unmarshal(sseEvent.Response, &completed); err == nil {
@@ -138,6 +143,10 @@ func (sp *StreamProcessor) Process(ctx context.Context, body io.ReadCloser) {
 						collectedUsage.TotalTokens = int(completed.Usage.TotalTokens)
 						if completed.Usage.InputTokensDetails != nil {
 							collectedUsage.PromptTokensDetails.CachedTokens = int(completed.Usage.InputTokensDetails.CachedTokens)
+						}
+						// 对齐 codex: 提取 reasoning_output_tokens
+						if completed.Usage.OutputTokensDetails != nil {
+							reasoningOutputTokens = int(completed.Usage.OutputTokensDetails.ReasoningTokens)
 						}
 					}
 				}
@@ -191,6 +200,10 @@ func (sp *StreamProcessor) Process(ctx context.Context, body io.ReadCloser) {
 	// 发送带有 usage 信息的最终 stop 响应
 	if collectedUsage.TotalTokens == 0 {
 		collectedUsage.TotalTokens = collectedUsage.PromptTokens + collectedUsage.CompletionTokens
+	}
+	// 对齐 codex: 设置 completion tokens details 中的 reasoning tokens
+	if reasoningOutputTokens > 0 {
+		collectedUsage.CompletionTokensDetails.ReasoningTokens = reasoningOutputTokens
 	}
 
 	finalModel := sp.model
@@ -354,7 +367,10 @@ func parseResponseFailedError(responseData json.RawMessage) error {
 		// 对齐 codex 中 ApiError::ServerOverloaded
 		return fmt.Errorf("server overloaded: %s", errObj.Message)
 	case "rate_limit_exceeded":
-		// 对齐 codex 中 ApiError::Retryable
+		// 对齐 codex 中 ApiError::Retryable，尝试从 message 中解析重试延迟
+		if delay := tryParseRetryAfter(errObj.Message); delay > 0 {
+			return fmt.Errorf("rate limit exceeded (retry after %v): %s", delay, errObj.Message)
+		}
 		return fmt.Errorf("rate limit exceeded: %s", errObj.Message)
 	default:
 		// 其他错误均视为可重试
@@ -367,6 +383,40 @@ func parseResponseFailedError(responseData json.RawMessage) error {
 	}
 }
 
+// tryParseRetryAfter 尝试从 rate_limit_exceeded 错误消息中解析重试延迟时间
+// 对齐 codex-rs/codex-api/src/sse/responses.rs 中的 try_parse_retry_after 函数
+func tryParseRetryAfter(message string) time.Duration {
+	if message == "" {
+		return 0
+	}
+	re := retryAfterRegex()
+	matches := re.FindStringSubmatch(message)
+	if len(matches) < 3 {
+		return 0
+	}
+	value, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0
+	}
+	unit := strings.ToLower(matches[2])
+	switch {
+	case unit == "s" || strings.HasPrefix(unit, "second"):
+		return time.Duration(value * float64(time.Second))
+	case unit == "ms":
+		return time.Duration(value * float64(time.Millisecond))
+	}
+	return 0
+}
+
+var _retryAfterRe *regexp.Regexp
+
+func retryAfterRegex() *regexp.Regexp {
+	if _retryAfterRe == nil {
+		_retryAfterRe = regexp.MustCompile(`(?i)try again in\s*(\d+(?:\.\d+)?)\s*(s|ms|seconds?)`)
+	}
+	return _retryAfterRe
+}
+
 // extractResponseModel 从 SSE 事件中提取服务器返回的模型名称
 // 对齐 codex-rs/codex-api/src/sse/responses.rs 中的 response_model() 方法
 func extractResponseModel(event *types.ResponsesStreamEvent) string {
@@ -376,19 +426,8 @@ func extractResponseModel(event *types.ResponsesStreamEvent) string {
 			Headers map[string]any `json:"headers,omitempty"`
 		}
 		if err := json.Unmarshal(event.Response, &resp); err == nil && resp.Headers != nil {
-			for key, val := range resp.Headers {
-				lowKey := key
-				if lowKey == "openai-model" || lowKey == "OpenAI-Model" || lowKey == "x-openai-model" {
-					if str, ok := val.(string); ok {
-						return str
-					}
-					// 可能是数组形式
-					if arr, ok := val.([]any); ok && len(arr) > 0 {
-						if str, ok := arr[0].(string); ok {
-							return str
-						}
-					}
-				}
+			if model := findModelInHeaders(resp.Headers); model != "" {
+				return model
 			}
 		}
 	}
@@ -397,20 +436,31 @@ func extractResponseModel(event *types.ResponsesStreamEvent) string {
 	if event.Headers != nil {
 		var headers map[string]any
 		if err := json.Unmarshal(event.Headers, &headers); err == nil {
-			for key, val := range headers {
-				if key == "openai-model" || key == "OpenAI-Model" || key == "x-openai-model" {
-					if str, ok := val.(string); ok {
-						return str
-					}
-					if arr, ok := val.([]any); ok && len(arr) > 0 {
-						if str, ok := arr[0].(string); ok {
-							return str
-						}
-					}
-				}
+			if model := findModelInHeaders(headers); model != "" {
+				return model
 			}
 		}
 	}
 
+	return ""
+}
+
+// findModelInHeaders 在 headers map 中查找 openai-model 或 x-openai-model 头
+// 对齐 codex: 使用忽略大小写的比较 (eq_ignore_ascii_case)
+func findModelInHeaders(headers map[string]any) string {
+	for key, val := range headers {
+		lowKey := strings.ToLower(key)
+		if lowKey == "openai-model" || lowKey == "x-openai-model" {
+			if str, ok := val.(string); ok {
+				return str
+			}
+			// 可能是数组形式
+			if arr, ok := val.([]any); ok && len(arr) > 0 {
+				if str, ok := arr[0].(string); ok {
+					return str
+				}
+			}
+		}
+	}
 	return ""
 }

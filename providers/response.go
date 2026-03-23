@@ -45,6 +45,9 @@ type Usage struct {
 	// PromptTokensDetails is the details of the prompt tokens.
 	PromptTokensDetails PromptTokensDetails `json:"prompt_tokens_details"`
 
+	// CompletionTokensDetails is the details of the completion tokens.
+	CompletionTokensDetails CompletionTokensDetails `json:"completion_tokens_details"`
+
 	// Credit is the credit used for this response.
 	Credit float64 `json:"credit"`
 }
@@ -55,8 +58,14 @@ type PromptTokensDetails struct {
 	CachedTokens int `json:"cached_tokens"`
 	// CacheCreationTokens is the number of tokens used to create the cache (Anthropic).
 	CacheCreationTokens int `json:"cache_creation_tokens,omitempty"`
-	// CacheReadTokens is the number of tokens read from cache (Anthropic).
+// CacheReadTokens is the number of tokens read from cache (Anthropic).
 	CacheReadTokens int `json:"cache_read_tokens,omitempty"`
+}
+
+// CompletionTokensDetails is the details of the completion tokens.
+type CompletionTokensDetails struct {
+	// ReasoningTokens is the number of reasoning tokens in the completion.
+	ReasoningTokens int `json:"reasoning_tokens,omitempty"`
 }
 
 // Response is the response from the model.
@@ -124,11 +133,12 @@ func (rsp *Response) Clone() *Response {
 	copy(clone.Choices, rsp.Choices)
 	if rsp.Usage != nil {
 		clone.Usage = &Usage{
-			PromptTokens:        rsp.Usage.PromptTokens,
-			CompletionTokens:    rsp.Usage.CompletionTokens,
-			TotalTokens:         rsp.Usage.TotalTokens,
-			PromptTokensDetails: rsp.Usage.PromptTokensDetails,
-			Credit:              rsp.Usage.Credit,
+			PromptTokens:            rsp.Usage.PromptTokens,
+			CompletionTokens:        rsp.Usage.CompletionTokens,
+			TotalTokens:             rsp.Usage.TotalTokens,
+			PromptTokensDetails:     rsp.Usage.PromptTokensDetails,
+			CompletionTokensDetails: rsp.Usage.CompletionTokensDetails,
+			Credit:                  rsp.Usage.Credit,
 		}
 	}
 	// Deep copy Error if present.

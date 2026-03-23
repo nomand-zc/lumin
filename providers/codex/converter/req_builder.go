@@ -21,7 +21,6 @@ func BuildRequest(req *providers.Request) (*types.ResponsesAPIRequest, error) {
 		ParallelToolCalls: true,
 		Store:             false,
 		Stream:            true,
-		Include:           []string{"reasoning.encrypted_content"},
 	}
 
 	// 转换消息为 Responses API input items
@@ -51,7 +50,19 @@ func BuildRequest(req *providers.Request) (*types.ResponsesAPIRequest, error) {
 	}
 
 	// 转换 reasoning 配置
-	apiReq.Reasoning = convertReasoning(&req.GenerationConfig)
+	apiReq.Reasoning = convertReasoning(&req.GenerationConfig, req.Metadata)
+
+	// 对齐 codex: 仅在有 reasoning 时才包含 "reasoning.encrypted_content"
+	if apiReq.Reasoning != nil {
+		apiReq.Include = []string{"reasoning.encrypted_content"}
+	}
+
+	// 支持从 metadata 设置 prompt_cache_key
+	if req.Metadata != nil {
+		if pck, ok := req.Metadata["prompt_cache_key"].(string); ok && pck != "" {
+			apiReq.PromptCacheKey = pck
+		}
+	}
 
 	return apiReq, nil
 }
@@ -195,7 +206,8 @@ func convertTools(tools []providers.Tool) []json.RawMessage {
 }
 
 // convertReasoning 将 GenerationConfig 中的推理相关配置转换为 Reasoning
-func convertReasoning(cfg *providers.GenerationConfig) *types.Reasoning {
+// 对齐 codex-rs/core/src/client.rs 中 build_responses_request 的 reasoning 构建逻辑
+func convertReasoning(cfg *providers.GenerationConfig, metadata map[string]any) *types.Reasoning {
 	if cfg == nil {
 		return nil
 	}
@@ -209,9 +221,14 @@ func convertReasoning(cfg *providers.GenerationConfig) *types.Reasoning {
 		reasoning.Effort = *cfg.ReasoningEffort
 	}
 
-	// 默认包含推理摘要
+	// 对齐 codex: summary 默认为 "auto"，支持通过 metadata 覆盖
 	if reasoning != nil {
-		reasoning.Summary = "concise"
+		reasoning.Summary = "auto"
+		if metadata != nil {
+			if rs, ok := metadata["reasoning_summary"].(string); ok && rs != "" {
+				reasoning.Summary = rs
+			}
+		}
 	}
 
 	return reasoning

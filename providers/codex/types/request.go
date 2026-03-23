@@ -16,6 +16,7 @@ type ResponsesAPIRequest struct {
 	Stream            bool              `json:"stream"`
 	Include           []string          `json:"include,omitempty"`
 	ServiceTier       string            `json:"service_tier,omitempty"`
+	PromptCacheKey    string            `json:"prompt_cache_key,omitempty"`
 	Text              *TextControls     `json:"text,omitempty"`
 }
 
