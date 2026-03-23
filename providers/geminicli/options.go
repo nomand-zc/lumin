@@ -12,9 +12,7 @@ const (
 	// API 版本
 	DefaultAPIVersion = "v1internal"
 
-	// GeminiCLI 版本号，对齐 gemini-cli package.json 中的 version
-	GeminiCLIVersion = "0.36.0"
-	// X-Goog-Api-Client header 值，对齐 @google/genai SDK 版本
+	GeminiCLIVersion         = "0.36.0"
 	GeminiCLIApiClientHeader = "google-genai-sdk/1.30.0 gl-node/v22.19.0"
 )
 
@@ -81,8 +79,7 @@ func (o *Options) GenerateURL() string {
 	return o.endpoint + "/" + o.apiVersion + ":generateContent"
 }
 
-// GeminiCLIUserAgent 生成符合 Gemini CLI 格式的 User-Agent 字符串
-// 对齐 gemini-cli contentGenerator.ts 中的 User-Agent 生成逻辑
+// GeminiCLIUserAgent 生成 User-Agent 字符串
 // 格式: "GeminiCLI/<version>/<model> (<os>; <arch>; <surface>)"
 func GeminiCLIUserAgent(model string) string {
 	if model == "" {

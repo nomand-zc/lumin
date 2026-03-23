@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 	"github.com/nomand-zc/lumin-client/httpclient"
 	"github.com/nomand-zc/lumin-client/providers"
 	"github.com/nomand-zc/lumin-client/providers/geminicli/converter"
+	"github.com/nomand-zc/lumin-client/providers/geminicli/sse"
 	"github.com/nomand-zc/lumin-client/queue"
 )
 
@@ -33,7 +35,14 @@ type geminicliProvider struct {
 
 // NewProvider 创建一个新的 GeminiCLI provider
 func NewProvider(name string, opts ...Option) *geminicliProvider {
-	options := defaultOptions
+	// 深拷贝 defaultOptions，避免多实例间共享 headers map
+	options := Options{
+		endpoint:   defaultOptions.endpoint,
+		apiVersion: defaultOptions.apiVersion,
+		headers:    make(map[string]string, len(defaultOptions.headers)),
+	}
+	maps.Copy(options.headers, defaultOptions.headers)
+
 	for _, opt := range opts {
 		opt(&options)
 	}
@@ -56,8 +65,7 @@ func (p *geminicliProvider) Type() string {
 	return providerType
 }
 
-// GenerateContent 生成内容（非流式）
-// 通过流式接口聚合完整响应，对齐 kiro provider 的实现模式
+// GenerateContent 生成内容（非流式），通过流式接口聚合完整响应
 func (p *geminicliProvider) GenerateContent(ctx context.Context, req *providers.Request) (*providers.Response, error) {
 	reader, err := p.GenerateContentStream(ctx, req)
 	if err != nil {
@@ -83,7 +91,6 @@ func (p *geminicliProvider) GenerateContent(ctx context.Context, req *providers.
 }
 
 // GenerateContentStream 流式生成内容
-// 对齐 CLIProxyAPIPlus 中 GeminiCLIExecutor.ExecuteStream 的核心逻辑
 func (p *geminicliProvider) GenerateContentStream(ctx context.Context, req *providers.Request) (queue.Consumer[*providers.Response], error) {
 	// 1. 初始化调用上下文
 	ctx, inv := providers.EnsureInvocationContext(ctx)
@@ -115,14 +122,13 @@ func (p *geminicliProvider) GenerateContentStream(ctx context.Context, req *prov
 		return nil, fmt.Errorf("failed to marshal geminicli request: %w", err)
 	}
 
-	// 5. 构建 HTTP 请求，对齐 CLIProxyAPIPlus 中的 URL 和 Headers
+	// 5. 构建 HTTP 请求
 	url := p.options.StreamURL()
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	// 设置 Headers，对齐 CLIProxyAPIPlus 中的 applyGeminiCLIHeaders
 	for key, value := range p.options.headers {
 		httpReq.Header.Set(key, value)
 	}
@@ -132,7 +138,6 @@ func (p *geminicliProvider) GenerateContentStream(ctx context.Context, req *prov
 	}
 	httpReq.Header.Set("Authorization", "Bearer "+geminiCreds.AccessToken)
 	httpReq.Header.Set("Accept", "text/event-stream")
-	// 动态 User-Agent（包含 model 名），对齐 CLIProxyAPIPlus 中 applyGeminiCLIHeaders
 	httpReq.Header.Set("User-Agent", GeminiCLIUserAgent(model))
 
 	// 6. 发送请求
@@ -141,16 +146,17 @@ func (p *geminicliProvider) GenerateContentStream(ctx context.Context, req *prov
 		return nil, fmt.Errorf("geminicli HTTP request failed: %w", err)
 	}
 
-	// 7. 检查状态码，对齐 CLIProxyAPIPlus 中的错误处理
+	// 7. 检查状态码
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
-		return nil, converter.ParseErrorResponse(resp.StatusCode, body)
+		return nil, sse.ParseErrorResponse(resp.StatusCode, body)
 	}
 
 	// 8. 解析 SSE 流
 	chainQueue := queue.New[*providers.Response](defaultQueueSize)
-	go converter.ParseSSEStream(ctx, resp.Body, model, chainQueue)
+	processor := sse.NewStreamProcessor(model, chainQueue)
+	go processor.Process(ctx, resp.Body)
 
 	return chainQueue, nil
 }

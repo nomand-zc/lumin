@@ -85,39 +85,18 @@ func (p *geminicliProvider) refreshOAuth2Token(ctx context.Context, creds *gemin
 	}
 
 	// 处理 HTTP 错误状态码
-	switch resp.StatusCode {
-	case http.StatusTooManyRequests:
-		return &providers.HTTPError{
-			ErrorType:     providers.ErrorTypeRateLimit,
-			ErrorCode:     providers.ErrorCodeRateLimit,
-			Message:       "token refresh rate limit",
-			RawStatusCode: resp.StatusCode,
-			RawBody:       respBody,
-		}
-	default:
-		if resp.StatusCode != http.StatusOK {
-			// 尝试解析错误信息
-			var errResp tokenRefreshResp
-			if jsonErr := json.Unmarshal(respBody, &errResp); jsonErr == nil && errResp.Error != "" {
-				if errResp.Error == "invalid_grant" {
-					return providers.ErrInvalidGrant
-				}
-				return &providers.HTTPError{
-					ErrorType:     providers.ErrorTypeUnauthorized,
-					ErrorCode:     providers.ErrorCodeUnauthorized,
-					Message:       fmt.Sprintf("token refresh failed: %s - %s", errResp.Error, errResp.ErrorDescription),
-					RawStatusCode: resp.StatusCode,
-					RawBody:       respBody,
-				}
+	if resp.StatusCode != http.StatusOK {
+		var errResp tokenRefreshResp
+		if jsonErr := json.Unmarshal(respBody, &errResp); jsonErr == nil && errResp.Error != "" {
+			if errResp.Error == "invalid_grant" {
+				return providers.ErrInvalidGrant
 			}
-			return &providers.HTTPError{
-				ErrorType:     providers.ErrorTypeServerError,
-				ErrorCode:     providers.ErrorCodeServerError,
-				Message:       fmt.Sprintf("token refresh failed, status=%d", resp.StatusCode),
-				RawStatusCode: resp.StatusCode,
-				RawBody:       respBody,
-			}
+			return newHTTPError(resp.StatusCode,
+				fmt.Sprintf("token refresh failed: %s - %s", errResp.Error, errResp.ErrorDescription),
+				respBody)
 		}
+		return newHTTPErrorf(resp.StatusCode, respBody,
+			"token refresh failed, status=%d", resp.StatusCode)
 	}
 
 	// 解析成功响应

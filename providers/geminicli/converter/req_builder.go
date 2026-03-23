@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/nomand-zc/lumin-client/providers"
+	"github.com/nomand-zc/lumin-client/providers/geminicli/types"
 )
 
-// 默认安全设置，对齐 CLIProxyAPIPlus 中的 DefaultSafetySettings
+// 默认安全设置
 var defaultSafetySettings = []map[string]string{
 	{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "OFF"},
 	{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "OFF"},
@@ -18,214 +19,63 @@ var defaultSafetySettings = []map[string]string{
 	{"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"},
 }
 
-// thoughtSignature 常量，对齐 CLIProxyAPIPlus
+// thoughtSignatureSkip 用于跳过 thoughtSignature 验证的默认值
 const thoughtSignatureSkip = "skip_thought_signature_validator"
 
-// ========== Gemini CLI API 请求结构体 ==========
-
-// GeminiCLIRequest 是发送到 Gemini CLI API 的顶层请求结构
-// 对齐 gemini-cli converter.ts 中 CAGenerateContentRequest 定义
-type GeminiCLIRequest struct {
-	Model              string          `json:"model"`
-	Project            string          `json:"project,omitempty"`
-	UserPromptID       string          `json:"user_prompt_id,omitempty"`
-	Request            *GeminiCLIInner `json:"request"`
-	EnabledCreditTypes []string        `json:"enabled_credit_types,omitempty"`
-}
-
-// GeminiCLIInner 是嵌套的 request 部分
-// 对齐 gemini-cli converter.ts 中 VertexGenerateContentRequest 定义
-type GeminiCLIInner struct {
-	Contents          []GeminiContent         `json:"contents"`
-	SystemInstruction *GeminiContent          `json:"systemInstruction,omitempty"`
-	CachedContent     string                  `json:"cachedContent,omitempty"`
-	Tools             []GeminiTool            `json:"tools,omitempty"`
-	ToolConfig        *GeminiToolConfig       `json:"toolConfig,omitempty"`
-	Labels            map[string]string       `json:"labels,omitempty"`
-	GenerationConfig  *GeminiGenerationConfig `json:"generationConfig,omitempty"`
-	SafetySettings    []map[string]string     `json:"safetySettings"`
-	SessionID         string                  `json:"session_id,omitempty"`
-}
-
-// GeminiContent 代表一条消息
-type GeminiContent struct {
-	Role  string       `json:"role"`
-	Parts []GeminiPart `json:"parts"`
-}
-
-// GeminiPart 代表消息中的一个部分
-type GeminiPart struct {
-	Text               string              `json:"text,omitempty"`
-	Thought            *bool               `json:"thought,omitempty"`
-	ThoughtSignature   string              `json:"thoughtSignature,omitempty"`
-	FunctionCall       *GeminiFunctionCall  `json:"functionCall,omitempty"`
-	FunctionResponse   *GeminiFuncResponse  `json:"functionResponse,omitempty"`
-	InlineData         *GeminiInlineData    `json:"inlineData,omitempty"`
-}
-
-// GeminiFunctionCall 代表函数调用
-type GeminiFunctionCall struct {
-	Name string         `json:"name"`
-	Args map[string]any `json:"args,omitempty"`
-}
-
-// GeminiFuncResponse 代表函数响应
-type GeminiFuncResponse struct {
-	Name     string              `json:"name"`
-	Response GeminiFuncRespValue `json:"response"`
-}
-
-// GeminiFuncRespValue 代表函数响应的值
-type GeminiFuncRespValue struct {
-	Result string `json:"result"`
-}
-
-// GeminiInlineData 代表内联数据（如图片）
-type GeminiInlineData struct {
-	MimeType string `json:"mime_type"`
-	Data     string `json:"data"`
-}
-
-// GeminiTool 代表工具定义
-type GeminiTool struct {
-	FunctionDeclarations []GeminiFunctionDecl `json:"functionDeclarations,omitempty"`
-}
-
-// GeminiFunctionDecl 代表函数声明
-type GeminiFunctionDecl struct {
-	Name                 string `json:"name"`
-	Description          string `json:"description,omitempty"`
-	ParametersJsonSchema any    `json:"parametersJsonSchema,omitempty"`
-}
-
-// GeminiToolConfig 工具配置
-type GeminiToolConfig struct {
-	FunctionCallingConfig *GeminiFunctionCallingConfig `json:"functionCallingConfig,omitempty"`
-}
-
-// GeminiFunctionCallingConfig 函数调用配置
-type GeminiFunctionCallingConfig struct {
-	Mode                 string   `json:"mode,omitempty"`
-	AllowedFunctionNames []string `json:"allowedFunctionNames,omitempty"`
-}
-
-// GeminiGenerationConfig 生成配置
-// 对齐 gemini-cli converter.ts 中 VertexGenerationConfig 定义
-type GeminiGenerationConfig struct {
-	Temperature      *float64              `json:"temperature,omitempty"`
-	TopP             *float64              `json:"topP,omitempty"`
-	TopK             *float64              `json:"topK,omitempty"`
-	MaxOutputTokens  *int                  `json:"maxOutputTokens,omitempty"`
-	StopSequences    []string              `json:"stopSequences,omitempty"`
-	PresencePenalty  *float64              `json:"presencePenalty,omitempty"`
-	FrequencyPenalty *float64              `json:"frequencyPenalty,omitempty"`
-	ThinkingConfig   *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
-}
-
-// GeminiThinkingConfig thinking 配置
-type GeminiThinkingConfig struct {
-	ThinkingBudget  *int  `json:"thinkingBudget,omitempty"`
-	ThinkingLevel   string `json:"thinkingLevel,omitempty"`
-	IncludeThoughts *bool  `json:"includeThoughts,omitempty"`
-}
-
-// ========== 转换逻辑 ==========
-
 // BuildRequest 将统一 Request 转换为 GeminiCLI 请求格式
-// 对齐 CLIProxyAPIPlus 中 ConvertClaudeRequestToCLI 的逻辑
-func BuildRequest(req *providers.Request, projectID string) (*GeminiCLIRequest, error) {
+func BuildRequest(req *providers.Request, projectID string) (*types.GeminiCLIRequest, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
 
-	inner := &GeminiCLIInner{
-		Contents:       make([]GeminiContent, 0),
+	inner := &types.GeminiCLIInner{
+		Contents:       make([]types.GeminiContent, 0),
 		SafetySettings: defaultSafetySettings,
 	}
 
-	// 1. 提取 system 消息为 systemInstruction
-	// 2. 转换 user/assistant/tool 消息为 contents
+	// 转换消息
 	for _, msg := range req.Messages {
 		switch msg.Role {
 		case providers.RoleSystem:
-			// system 消息提取为 systemInstruction，对齐 CLIProxyAPIPlus
-			systemParts := make([]GeminiPart, 0)
-			if msg.Content != "" {
-				systemParts = append(systemParts, GeminiPart{Text: msg.Content})
-			}
-			// 支持多模态 system 消息
-			for _, cp := range msg.ContentParts {
-				if cp.Type == providers.ContentTypeText && cp.Text != nil {
-					systemParts = append(systemParts, GeminiPart{Text: *cp.Text})
-				}
-			}
-			if len(systemParts) > 0 {
-				inner.SystemInstruction = &GeminiContent{
-					Role:  "user",
-					Parts: systemParts,
-				}
-			}
-
+			inner.SystemInstruction = convertSystemMessage(&msg)
 		case providers.RoleUser:
-			content := convertUserMessage(&msg)
-			inner.Contents = append(inner.Contents, content)
-
+			inner.Contents = append(inner.Contents, convertUserMessage(&msg))
 		case providers.RoleAssistant:
-			content := convertAssistantMessage(&msg)
-			inner.Contents = append(inner.Contents, content)
-
+			inner.Contents = append(inner.Contents, convertAssistantMessage(&msg))
 		case providers.RoleTool:
-			content := convertToolMessage(&msg)
-			inner.Contents = append(inner.Contents, content)
+			inner.Contents = append(inner.Contents, convertToolMessage(&msg))
 		}
 	}
 
-	// 对齐 CLIProxyAPIPlus 中的 fixCLIToolResponse 逻辑：
 	// 将分散的 functionResponse 消息合并到对应的 functionCall 之后
 	inner.Contents = fixToolResponseGrouping(inner.Contents)
 
-	// 3. 转换 tools 为 functionDeclarations
+	// 转换 tools 为 functionDeclarations
 	if len(req.Tools) > 0 {
-		tool := GeminiTool{
-			FunctionDeclarations: make([]GeminiFunctionDecl, 0, len(req.Tools)),
-		}
-		for _, t := range req.Tools {
-			decl := GeminiFunctionDecl{
-				Name:        t.Name,
-				Description: t.Description,
-			}
-			// 使用 parametersJsonSchema（对齐 CLIProxyAPIPlus）
-			if t.Parameters.Type != "" {
-				decl.ParametersJsonSchema = t.Parameters
-			}
-			tool.FunctionDeclarations = append(tool.FunctionDeclarations, decl)
-		}
-		inner.Tools = []GeminiTool{tool}
+		inner.Tools = convertTools(req.Tools)
 	}
 
-	// 4. 处理 tool_choice（从 Metadata 中获取）
+	// 处理 tool_choice
 	if req.Metadata != nil {
 		if toolChoice, ok := req.Metadata["tool_choice"]; ok {
-			inner.ToolConfig = convertToolChoice(toolChoice)
+			inner.ToolConfig = ConvertToolChoice(toolChoice)
 		}
 	}
 
-	// 5. 映射 GenerationConfig
-	genConfig := convertGenerationConfig(&req.GenerationConfig)
-	if genConfig != nil {
+	// 映射 GenerationConfig
+	if genConfig := ConvertGenerationConfig(&req.GenerationConfig); genConfig != nil {
 		inner.GenerationConfig = genConfig
 	}
 
-	// 6. 从 Metadata 中提取可选的 user_prompt_id、session_id、enabled_credit_types、labels
+	// 从 Metadata 中提取可选字段
 	var userPromptID string
-	var sessionID string
 	var enabledCreditTypes []string
 	if req.Metadata != nil {
 		if v, ok := req.Metadata["user_prompt_id"].(string); ok {
 			userPromptID = v
 		}
 		if v, ok := req.Metadata["session_id"].(string); ok {
-			sessionID = v
+			inner.SessionID = v
 		}
 		if v, ok := req.Metadata["enabled_credit_types"].([]string); ok {
 			enabledCreditTypes = v
@@ -237,9 +87,8 @@ func BuildRequest(req *providers.Request, projectID string) (*GeminiCLIRequest, 
 			inner.CachedContent = v
 		}
 	}
-	inner.SessionID = sessionID
 
-	return &GeminiCLIRequest{
+	return &types.GeminiCLIRequest{
 		Model:              req.Model,
 		Project:            projectID,
 		UserPromptID:       userPromptID,
@@ -248,29 +97,46 @@ func BuildRequest(req *providers.Request, projectID string) (*GeminiCLIRequest, 
 	}, nil
 }
 
-// convertUserMessage 将 user 消息转换为 GeminiContent
-func convertUserMessage(msg *providers.Message) GeminiContent {
-	content := GeminiContent{
-		Role:  "user",
-		Parts: make([]GeminiPart, 0),
-	}
-
-	// 文本内容
+// convertSystemMessage 将 system 消息提取为 systemInstruction
+func convertSystemMessage(msg *providers.Message) *types.GeminiContent {
+	systemParts := make([]types.GeminiPart, 0)
 	if msg.Content != "" {
-		content.Parts = append(content.Parts, GeminiPart{Text: msg.Content})
+		systemParts = append(systemParts, types.GeminiPart{Text: msg.Content})
+	}
+	for _, cp := range msg.ContentParts {
+		if cp.Type == providers.ContentTypeText && cp.Text != nil {
+			systemParts = append(systemParts, types.GeminiPart{Text: *cp.Text})
+		}
+	}
+	if len(systemParts) == 0 {
+		return nil
+	}
+	return &types.GeminiContent{
+		Role:  "user",
+		Parts: systemParts,
+	}
+}
+
+// convertUserMessage 将 user 消息转换为 GeminiContent
+func convertUserMessage(msg *providers.Message) types.GeminiContent {
+	content := types.GeminiContent{
+		Role:  "user",
+		Parts: make([]types.GeminiPart, 0),
 	}
 
-	// 多模态内容
+	if msg.Content != "" {
+		content.Parts = append(content.Parts, types.GeminiPart{Text: msg.Content})
+	}
+
 	for _, cp := range msg.ContentParts {
 		switch cp.Type {
 		case providers.ContentTypeText:
 			if cp.Text != nil {
-				content.Parts = append(content.Parts, GeminiPart{Text: *cp.Text})
+				content.Parts = append(content.Parts, types.GeminiPart{Text: *cp.Text})
 			}
 		case providers.ContentTypeImage:
 			if cp.Image != nil {
-				part := convertImagePart(cp.Image)
-				if part != nil {
+				if part := convertImagePart(cp.Image); part != nil {
 					content.Parts = append(content.Parts, *part)
 				}
 			}
@@ -281,16 +147,16 @@ func convertUserMessage(msg *providers.Message) GeminiContent {
 }
 
 // convertAssistantMessage 将 assistant 消息转换为 GeminiContent（role=model）
-func convertAssistantMessage(msg *providers.Message) GeminiContent {
-	content := GeminiContent{
+func convertAssistantMessage(msg *providers.Message) types.GeminiContent {
+	content := types.GeminiContent{
 		Role:  "model",
-		Parts: make([]GeminiPart, 0),
+		Parts: make([]types.GeminiPart, 0),
 	}
 
 	// thinking/reasoning 内容
 	if msg.ReasoningContent != "" {
 		isThought := true
-		content.Parts = append(content.Parts, GeminiPart{
+		content.Parts = append(content.Parts, types.GeminiPart{
 			Text:    msg.ReasoningContent,
 			Thought: &isThought,
 		})
@@ -298,26 +164,24 @@ func convertAssistantMessage(msg *providers.Message) GeminiContent {
 
 	// 文本内容
 	if msg.Content != "" {
-		content.Parts = append(content.Parts, GeminiPart{Text: msg.Content})
+		content.Parts = append(content.Parts, types.GeminiPart{Text: msg.Content})
 	}
 
 	// tool calls 转换为 functionCall
 	for _, tc := range msg.ToolCalls {
-		fc := &GeminiFunctionCall{
+		fc := &types.GeminiFunctionCall{
 			Name: tc.Function.Name,
 		}
-		// 解析 arguments
 		if len(tc.Function.Arguments) > 0 {
 			var args map[string]any
 			if err := json.Unmarshal(tc.Function.Arguments, &args); err == nil {
 				fc.Args = args
 			}
 		}
-		part := GeminiPart{
+		part := types.GeminiPart{
 			ThoughtSignature: thoughtSignatureSkip,
 			FunctionCall:     fc,
 		}
-		// 如果有 ExtraFields 中的 thoughtSignature，使用它
 		if tc.ExtraFields != nil {
 			if sig, ok := tc.ExtraFields["thoughtSignature"].(string); ok && sig != "" {
 				part.ThoughtSignature = sig
@@ -330,10 +194,9 @@ func convertAssistantMessage(msg *providers.Message) GeminiContent {
 }
 
 // convertToolMessage 将 tool 消息转换为 GeminiContent（role=function）
-func convertToolMessage(msg *providers.Message) GeminiContent {
+func convertToolMessage(msg *providers.Message) types.GeminiContent {
 	funcName := msg.ToolName
 	if funcName == "" && msg.ToolID != "" {
-		// 尝试从 ToolID 中提取函数名（对齐 CLIProxyAPIPlus 的逻辑）
 		parts := strings.Split(msg.ToolID, "-")
 		if len(parts) > 1 {
 			funcName = strings.Join(parts[0:len(parts)-1], "-")
@@ -342,13 +205,13 @@ func convertToolMessage(msg *providers.Message) GeminiContent {
 		}
 	}
 
-	return GeminiContent{
+	return types.GeminiContent{
 		Role: "function",
-		Parts: []GeminiPart{
+		Parts: []types.GeminiPart{
 			{
-				FunctionResponse: &GeminiFuncResponse{
+				FunctionResponse: &types.GeminiFuncResponse{
 					Name: funcName,
-					Response: GeminiFuncRespValue{
+					Response: types.GeminiFuncRespValue{
 						Result: msg.Content,
 					},
 				},
@@ -358,175 +221,71 @@ func convertToolMessage(msg *providers.Message) GeminiContent {
 }
 
 // convertImagePart 将图片数据转换为 GeminiPart
-func convertImagePart(img *providers.Image) *GeminiPart {
-	if img == nil {
+func convertImagePart(img *providers.Image) *types.GeminiPart {
+	if img == nil || len(img.Data) == 0 {
 		return nil
 	}
 
-	// 如果有 URL，目前 Gemini CLI 不直接支持 URL，跳过
-	// 如果有 Data，使用 inlineData
-	if len(img.Data) > 0 {
-		mimeType := "image/png"
-		switch img.Format {
-		case "jpg", "jpeg":
-			mimeType = "image/jpeg"
-		case "webp":
-			mimeType = "image/webp"
-		case "gif":
-			mimeType = "image/gif"
-		case "png":
-			mimeType = "image/png"
-		}
-		return &GeminiPart{
-			InlineData: &GeminiInlineData{
-				MimeType: mimeType,
-				Data:     base64.StdEncoding.EncodeToString(img.Data),
-			},
-		}
+	mimeType := "image/png"
+	switch img.Format {
+	case "jpg", "jpeg":
+		mimeType = "image/jpeg"
+	case "webp":
+		mimeType = "image/webp"
+	case "gif":
+		mimeType = "image/gif"
 	}
 
-	return nil
+	return &types.GeminiPart{
+		InlineData: &types.GeminiInlineData{
+			MimeType: mimeType,
+			Data:     base64.StdEncoding.EncodeToString(img.Data),
+		},
+	}
 }
 
-// convertToolChoice 将 tool_choice 转换为 GeminiToolConfig
-func convertToolChoice(toolChoice any) *GeminiToolConfig {
-	config := &GeminiToolConfig{
-		FunctionCallingConfig: &GeminiFunctionCallingConfig{},
-	}
-
-	switch v := toolChoice.(type) {
-	case string:
-		switch v {
-		case "auto":
-			config.FunctionCallingConfig.Mode = "AUTO"
-		case "none":
-			config.FunctionCallingConfig.Mode = "NONE"
-		case "any", "required":
-			config.FunctionCallingConfig.Mode = "ANY"
-		default:
-			return nil
+// convertTools 将统一 Tool 列表转换为 Gemini 工具定义
+func convertTools(tools []providers.Tool) []types.GeminiTool {
+	decls := make([]types.GeminiFunctionDecl, 0, len(tools))
+	for _, t := range tools {
+		decl := types.GeminiFunctionDecl{
+			Name:        t.Name,
+			Description: t.Description,
 		}
-	case map[string]any:
-		tcType, _ := v["type"].(string)
-		tcName, _ := v["name"].(string)
-		switch tcType {
-		case "auto":
-			config.FunctionCallingConfig.Mode = "AUTO"
-		case "none":
-			config.FunctionCallingConfig.Mode = "NONE"
-		case "any":
-			config.FunctionCallingConfig.Mode = "ANY"
-		case "tool", "function":
-			config.FunctionCallingConfig.Mode = "ANY"
-			if tcName != "" {
-				config.FunctionCallingConfig.AllowedFunctionNames = []string{tcName}
-			}
-		default:
-			return nil
+		if t.Parameters.Type != "" {
+			decl.ParametersJsonSchema = t.Parameters
 		}
-	default:
-		return nil
+		decls = append(decls, decl)
 	}
-
-	return config
+	return []types.GeminiTool{{FunctionDeclarations: decls}}
 }
 
-// convertGenerationConfig 将统一 GenerationConfig 转换为 Gemini 格式
-func convertGenerationConfig(cfg *providers.GenerationConfig) *GeminiGenerationConfig {
-	if cfg == nil {
-		return nil
-	}
-
-	genCfg := &GeminiGenerationConfig{}
-	hasConfig := false
-
-	if cfg.Temperature != nil {
-		genCfg.Temperature = cfg.Temperature
-		hasConfig = true
-	}
-	if cfg.TopP != nil {
-		genCfg.TopP = cfg.TopP
-		hasConfig = true
-	}
-	if cfg.PresencePenalty != nil {
-		genCfg.PresencePenalty = cfg.PresencePenalty
-		hasConfig = true
-	}
-	if cfg.FrequencyPenalty != nil {
-		genCfg.FrequencyPenalty = cfg.FrequencyPenalty
-		hasConfig = true
-	}
-	if cfg.MaxTokens != nil {
-		genCfg.MaxOutputTokens = cfg.MaxTokens
-		hasConfig = true
-	}
-	if len(cfg.Stop) > 0 {
-		genCfg.StopSequences = cfg.Stop
-		hasConfig = true
-	}
-
-	// thinking 配置
-	if cfg.ThinkingEnabled != nil {
-		include := *cfg.ThinkingEnabled
-		thinkingCfg := &GeminiThinkingConfig{
-			IncludeThoughts: &include,
-		}
-		if cfg.ThinkingTokens != nil {
-			budget := *cfg.ThinkingTokens
-			thinkingCfg.ThinkingBudget = &budget
-		}
-		genCfg.ThinkingConfig = thinkingCfg
-		hasConfig = true
-	}
-
-	// reasoning effort 映射为 thinkingLevel
-	if cfg.ReasoningEffort != nil && *cfg.ReasoningEffort != "" {
-		effort := strings.ToLower(*cfg.ReasoningEffort)
-		if genCfg.ThinkingConfig == nil {
-			genCfg.ThinkingConfig = &GeminiThinkingConfig{}
-		}
-		genCfg.ThinkingConfig.ThinkingLevel = effort
-		include := effort != "none"
-		genCfg.ThinkingConfig.IncludeThoughts = &include
-		hasConfig = true
-	}
-
-	if !hasConfig {
-		return nil
-	}
-	return genCfg
-}
-
-// fixToolResponseGrouping 对齐 CLIProxyAPIPlus 中 fixCLIToolResponse 的逻辑：
-// 将分散的 function role 消息正确地分组到对应的 model（含 functionCall）消息之后
-func fixToolResponseGrouping(contents []GeminiContent) []GeminiContent {
+// fixToolResponseGrouping 将分散的 function role 消息正确地分组到对应的 model（含 functionCall）消息之后
+func fixToolResponseGrouping(contents []types.GeminiContent) []types.GeminiContent {
 	type functionCallGroup struct {
 		responsesNeeded int
 	}
 
-	result := make([]GeminiContent, 0, len(contents))
+	result := make([]types.GeminiContent, 0, len(contents))
 	var pendingGroups []*functionCallGroup
-	var collectedResponses []GeminiPart
+	var collectedResponses []types.GeminiPart
 
 	for _, content := range contents {
-		// 收集 function 角色的响应 parts
 		if content.Role == "function" {
 			for _, part := range content.Parts {
 				if part.FunctionResponse != nil {
 					collectedResponses = append(collectedResponses, part)
 				}
 			}
-			// 尝试用收集到的响应填充 pending groups
 			for i := len(pendingGroups) - 1; i >= 0; i-- {
 				group := pendingGroups[i]
 				if len(collectedResponses) >= group.responsesNeeded {
 					groupResponses := collectedResponses[:group.responsesNeeded]
 					collectedResponses = collectedResponses[group.responsesNeeded:]
-					funcContent := GeminiContent{
+					result = append(result, types.GeminiContent{
 						Role:  "function",
 						Parts: groupResponses,
-					}
-					result = append(result, funcContent)
+					})
 					pendingGroups = append(pendingGroups[:i], pendingGroups[i+1:]...)
 					break
 				}
@@ -534,7 +293,6 @@ func fixToolResponseGrouping(contents []GeminiContent) []GeminiContent {
 			continue
 		}
 
-		// model 角色的消息：检查是否包含 functionCall
 		if content.Role == "model" {
 			functionCallCount := 0
 			for _, part := range content.Parts {
@@ -551,7 +309,6 @@ func fixToolResponseGrouping(contents []GeminiContent) []GeminiContent {
 			continue
 		}
 
-		// 其他角色直接添加
 		result = append(result, content)
 	}
 
@@ -560,11 +317,10 @@ func fixToolResponseGrouping(contents []GeminiContent) []GeminiContent {
 		if len(collectedResponses) >= group.responsesNeeded {
 			groupResponses := collectedResponses[:group.responsesNeeded]
 			collectedResponses = collectedResponses[group.responsesNeeded:]
-			funcContent := GeminiContent{
+			result = append(result, types.GeminiContent{
 				Role:  "function",
 				Parts: groupResponses,
-			}
-			result = append(result, funcContent)
+			})
 		}
 	}
 
