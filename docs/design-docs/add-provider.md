@@ -52,6 +52,7 @@ func (p *xxxProvider) GenerateContentStream(ctx context.Context, req *providers.
 ### 3. 注册
 
 在 `init()` 中注册：
+
 ```go
 func init() {
     providers.Register(&xxxProvider{})

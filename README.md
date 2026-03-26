@@ -231,6 +231,7 @@ graph TB
 ```
 
 **Provider Invocation Flow**:
+
 ```
 Caller
   │
