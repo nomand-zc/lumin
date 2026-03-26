@@ -94,9 +94,8 @@ pre-commit install
 | 类别 | 检查项 | 说明 |
 |------|--------|------|
 | **Go 代码** | `go fmt` | 格式化 Go 代码 |
-| | `goimports` | 导入语句排序和格式化 |
-| | `go vet` | 静态分析检查 |
-| | `golangci-lint` | 综合代码检查 |
+| | `golangci-lint` | 综合代码检查（含 goimports, go vet） |
+| | `go test` | **单元测试门禁**（-race 竞态检测 + 覆盖率） |
 | | `go mod tidy` | 依赖整理 |
 | **通用检查** | `trailing-whitespace` | 行尾空白检查 |
 | | `end-of-file-fixer` | 文件末尾换行检查 |
